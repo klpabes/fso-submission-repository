@@ -5,12 +5,14 @@ import Filter from "./components/Filter";
 import PersonForm from "./components/PersonForm";
 import Persons from "./components/Persons";
 import personService from "./services/persons";
+import Notification from "./components/Notification";
 
 const App = () => {
   const [persons, setPersons] = useState([]);
   const [newName, setNewName] = useState("");
   const [newNumber, setNewNumber] = useState("");
   const [searchName, setSearchName] = useState("");
+  const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
     personService.showPersons().then((initialPersons) => {
@@ -34,10 +36,13 @@ const App = () => {
         setPersons(persons.concat(returnedPersons));
         setNewName("");
         setNewNumber("");
+        setErrorMessage(`Added ${personObject.name}`);
+        setTimeout(() => {
+          setErrorMessage(null);
+        }, 5000);
         return;
       });
     } else if (persons.some((person) => personObject.name === person.name)) {
-      console.log("yes");
       if (
         window.confirm(
           `${personObject.name} is already added in the phonebook, replace the old number with the a new one?`
@@ -46,17 +51,30 @@ const App = () => {
         const person = persons.find((p) => p.name === personObject.name);
         const id = person.id;
         const updatedPerson = { ...person, number: newNumber };
-        console.log(updatedPerson, "updated person");
 
         personService
           .updateNumber(id, updatedPerson)
-          .then((returnedPerson) =>
+          .then((returnedPerson) => {
             setPersons(
               persons.map((person) =>
                 person.id !== id ? person : returnedPerson
               )
-            )
-          );
+            );
+            setNewName("");
+            setNewNumber("");
+            setErrorMessage(`Changed ${returnedPerson.name}'s number`);
+            setTimeout(() => {
+              setErrorMessage(null);
+            }, 5000);
+          })
+          .catch((error) => {
+            setErrorMessage(
+              `Information of ${person.name} has already been removed from the server`
+            );
+            setTimeout(() => {
+              setErrorMessage(null);
+            }, 5000);
+          });
       }
     }
     return;
@@ -86,6 +104,7 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={errorMessage} />
       <div>
         filter shown with
         <Filter value={searchName} onChange={handleSearchChange} />
